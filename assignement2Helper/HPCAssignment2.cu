@@ -19,17 +19,58 @@
 #include <helper_cuda.h>         // helper functions for CUDA error check
 
 #define MAX_EPSILON_ERROR 5e-3f
+#define TILE_WIDTH 16
+#define FILTERDIM 3                     //CHANGE THIS WHEN USING DIFFERENT MASK SIZE
+__constant__ float dconstantFilter[FILTERDIM*FILTERDIM];
 
 const char *imageFilename = "lena_bw.pgm";
-const char *refFilename   = "ref_rotated.pgm";
 
 const char *sampleName = "HPCAssignment2.cu";
 
 
+//SHARED MEMORY TILING IMPLEMENTATION========================================================================
+//do later
+/*__global__ void GPUSharedConv(float* ddata, float* doutput, float* filter, int imageWidth, int imageHeight, int filterDim){
+
+		int sWidth = TILE_WIDTH + filterDim -1 ;
+		__shared__ float SD_data[sWidth][sWidth] ;
+
+
+}*/
+
+//CONSTANT MEMORY FILTER IMPLEMENTATION======================================================================
+__global__ void GPUConstantConv(float* ddata, float* doutput,int imageWidth, int imageHeight, int filterDim){
+
+int k,l;                          //counting variables
+float sum=0.0;                          //temp sum
+int offset = ((filterDim-1)/2);     //bounds for inner loop
+
+unsigned int x = blockIdx.x*blockDim.x + threadIdx.x;
+		unsigned int y = blockIdx.y*blockDim.y + threadIdx.y;
+
+int i = y*imageWidth+ x ;
+
+for(k=0; k<filterDim; k++){
+	for(l=0; l<filterDim ; l++){
+		if((i%imageWidth + l - offset > 0) && (i%imageWidth + l - offset < imageWidth) && (i%imageWidth + k - offset >0) && (i%imageWidth + l - offset < imageHeight))                        //COnditions if the filter falls over the image or off. First 2 check the width and last 2 check the heights
+			sum+= ddata[i+l-offset+(k-offset)*imageWidth]*dconstantFilter[l+k*filterDim] ;
+	}
+}
+if(sum<0)
+	sum=0;
+if(sum>1)
+	sum=1 ;
+
+doutput[i] = sum ;
+
+}
+
+//===========================================================================================================
+
+//===========================================================================================================
+
 //NAIVE GPU IMPLEMENTATION OF CONVOLUTION====================================================================
 __global__ void GPUNaiveConv(float* ddata, float* doutput, float* filter, int imageWidth, int imageHeight, int filterDim){
-
-//UNTESTED
 
 	int k,l;                          //counting variables
 	float sum=0.0;                          //temp sum
@@ -70,7 +111,6 @@ void CPUConv(float* hdata, float* houtput, float* filter, int imageWidth, int im
 		for(k=0; k<filterDim; k++){
 			for(l=0; l<filterDim ; l++){
 				if((i+l-offset+(k-offset)*imageWidth > 0) && (i+l-offset+(k-offset)*imageWidth < imageWidth*imageHeight) && (i%imageWidth + l - offset > 0) && (i%imageWidth + l - offset < imageWidth) && (i%imageWidth + k - offset >0) && (i%imageWidth + l - offset < imageHeight))                        //COnditions if the filter falls over the image or off. First 2 check the width and last 2 check the heights
-
 					sum+= hdata[i+l-offset+(k-offset)*imageWidth]*filter[l+k*filterDim] ;
 			}
 		}
@@ -97,11 +137,11 @@ int main(int argc, char **argv){
 
 //DEFINE FILTER HERE====================================
 //	float filter[] ={0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0};                 //returns original image
-	// float filter[] ={-1.0,0.0,1.0,-2.0,0.0,2.0,-1.0,0.0,1.0};            //highlights edges
-	float filter[] ={-1.0,-1.0,-1.0,-1.0,9.0,-1.0,-1.0,-1.0,-1.0};      //sharpens image
+	 float filter[] ={-1.0,0.0,1.0,-2.0,0.0,2.0,-1.0,0.0,1.0};            //highlights edges
+//	float filter[] ={-1.0,-1.0,-1.0,-1.0,9.0,-1.0,-1.0,-1.0,-1.0};      //sharpens image
 //	float filter[] ={1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0};   //slightly blurs image
 
-	int filterDim=3;  						//dimensions of the filter, assume its square
+	int filterDim=FILTERDIM;  						//dimensions of the filter, assume its square
 //======================================================
 
     	if (imagePath == NULL)
@@ -178,12 +218,58 @@ CPUConv(hData,hOutputData,filter,width,height,filterDim);   //Run cpu version
 sdkSavePGM("Image_NAIVE_OUT.pgm",hOutputData,width,height);               //save the new image as Image_out.pgm
 //======================================
 
+//RUN THE CONSTANT MEMORY GPU implementation=======
+float *dcData = 0;
+float *dcOutput = 0;
+float *dcFilter = 0;
+
+cudaMalloc((void**)&dcData, size);
+cudaMalloc((void**)&dcOutput, size);
+cudaMalloc((void**)&dcFilter, filterDim*filterDim*sizeof(float));       //assign the space required for the above arrays
+
+ if(dcOutput == 0 || dcData == 0 || dcFilter == 0)                       //check if the arrays actually initialised properly
+	{
+		printf("couldn't allocate device memory (texture)\n");
+		return 1;
+	}
+
+	cudaMemcpy(dcData, hData, size, cudaMemcpyHostToDevice);            //Copy the image to the device
+	//cudaMemcpy(dcFilter, filter, filterDim*filterDim*sizeof(float), cudaMemcpyHostToDevice);	   //copy the filter to the device
+	cudaMemcpyToSymbol(dconstantFilter,dFilter,sizeof(float *)*filterDim*filterDim) ;
+
+
+	const size_t cblock_size = 256;                                 //initialise block size
+	size_t cgrid_size = width*height / cblock_size;                   // calculate gride size
+
+  	// deal with a possible partial final block
+ 	 if(width*height % block_size) ++cgrid_size;
+
+	 cudaEventCreate(&launch_begin);
+	 cudaEventCreate(&launch_end);
+	 // record a CUDA event immediately before and after the kernel launch
+	 cudaEventRecord(launch_begin,0);
+	 // launch the kernel
+	 GPUNaiveConv<<<grid_size, block_size>>>(dData,dOutput,dFilter,width,height,filterDim) ;          //Call the kernal
+	 cudaEventRecord(launch_end,0);
+	 cudaEventSynchronize(launch_end);
+	 // measure the time (ms) spent in the kernel
+	 //	 float time = 0;
+	 		cudaEventElapsedTime(&time, launch_begin, launch_end);
+
+	 // copy the result back to the host memory space
+	 cudaMemcpy(hOutputData, dOutput, size, cudaMemcpyDeviceToHost);
+	 printf("GPU Const run time: %fms\n", time);
+
+	 sdkSavePGM("Image_CONST_OUT.pgm",hOutputData,width,height);
+
+//=================================================
+
 
 //	for(int i=0;i<width*height;i++)
 //	printf("%f " , hOutputData[i]);	                         //testing purposes
 
 
-	sdkSavePGM("Image_OUT.pgm",hOutputData,width,height);               //save the new image as Image_out.pgm
+//	sdkSavePGM("Image_OUT.pgm",hOutputData,width,height);               //save the new image as Image_out.pgm
 
 
 }
