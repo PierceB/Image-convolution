@@ -260,6 +260,7 @@ float *dcFilter = 0;
 cudaMalloc((void**)&dcData, size);
 cudaMalloc((void**)&dcOutput, size);
 cudaMalloc((void**)&dcFilter, filterDim*filterDim*sizeof(float));       //assign the space required for the above arrays
+cudaMalloc((void**)&dconstantFilter, filterDim*filterDim*sizeof(float));       //assign the space required for the above arrays
 
  if(dcOutput == 0 || dcData == 0 || dcFilter == 0)                       //check if the arrays actually initialised properly
 	{
@@ -268,8 +269,8 @@ cudaMalloc((void**)&dcFilter, filterDim*filterDim*sizeof(float));       //assign
 	}
 
 	cudaMemcpy(dcData, hData, size, cudaMemcpyHostToDevice);            //Copy the image to the device
-	//cudaMemcpy(dcFilter, filter, filterDim*filterDim*sizeof(float), cudaMemcpyHostToDevice);	   //copy the filter to the device
-	cudaMemcpyToSymbol(dconstantFilter,dFilter,sizeof(float *)*filterDim*filterDim) ;
+	cudaMemcpy(dcFilter, filter, filterDim*filterDim*sizeof(float), cudaMemcpyHostToDevice);	   //copy the filter to the device
+	cudaMemcpyToSymbol(dconstantFilter,dcFilter,sizeof(float *)*filterDim*filterDim,0,cudaMemcpyHostToDevice) ;
 
 
 	const size_t cblock_size = 256;                                 //initialise block size
@@ -283,7 +284,7 @@ cudaMalloc((void**)&dcFilter, filterDim*filterDim*sizeof(float));       //assign
 	 // record a CUDA event immediately before and after the kernel launch
 	 cudaEventRecord(launch_begin,0);
 	 // launch the kernel
-	 GPUConstantConv<<<grid_size, block_size>>>(dData,dconstantFilter,dOutput,width,height,filterDim) ;          //Call the kernal
+	 GPUConstantConv<<<cgrid_size, cblock_size>>>(dcData,dconstantFilter,dcOutput,width,height,filterDim) ;          //Call the kernal
 	 cudaEventRecord(launch_end,0);
 	 cudaEventSynchronize(launch_end);
 	 // measure the time (ms) spent in the kernel
@@ -348,7 +349,7 @@ cudaMalloc((void**)&dtFilter, filterDim*filterDim*sizeof(float));       //assign
 	 // record a CUDA event immediately before and after the kernel launch
 	 cudaEventRecord(launch_begin,0);
 	 // launch the kernel
-	 GPUTextureConv<<<grid_size, block_size>>>(dOutput,dFilter,width,height,filterDim) ;          //Call the kernal
+	 GPUTextureConv<<<tgrid_size, tblock_size>>>(dtOutput,dtFilter,width,height,filterDim) ;          //Call the kernal
 	 cudaEventRecord(launch_end,0);
 	 cudaEventSynchronize(launch_end);
 	 // measure the time (ms) spent in the kernel
