@@ -25,7 +25,7 @@
 
 texture<float, 1, cudaReadModeElementType> tex;
 
-const char *imageFilename = "lena_bw.pgm";
+const char *imageFilename = "instagram_egg.0.pgm";
 
 const char *sampleName = "HPCAssignment2.cu";
 
@@ -44,7 +44,7 @@ __global__ void GPUTextureConv(float* doutput, float* filter, int imageWidth, in
 
 	for(k=0; k<filterDim; k++){                                       //calculate CONVOLUTION
 		for(l=0; l<filterDim ; l++){
-			if((i%imageWidth + l - offset > 0) && (i%imageWidth + l - offset < imageWidth) && (i%imageWidth + k - offset >0) && (i%imageWidth + l - offset < imageHeight))                        //COnditions if the filter falls over the image or off. First 2 check the width and last 2 check the heights
+			if((i+l-offset+(k-offset)*imageWidth > 0) && (i+l-offset+(k-offset)*imageWidth< imageWidth*imageHeight) && (i%imageWidth + l - offset > 0) && (i%imageWidth + l - offset < imageWidth) && (i%imageHeight + k - offset >0) && (i%imageHeight +k - offset < imageHeight))                        //COnditions if the filter falls over the image or off. First 2 check the width and last 2 check the heights
 				sum+= tex1D(tex,i+l-offset+(k-offset)*imageWidth)*filter[l+k*filterDim] ;
 			}
 		}
@@ -86,15 +86,17 @@ __global__ void GPUConstantConv(float* ddata,const float *__restrict__ kernel, f
 
 	for(k=0; k<filterDim; k++){                                       //calculate CONVOLUTION
 		for(l=0; l<filterDim ; l++){
-			if((i%imageWidth + l - offset > 0) && (i%imageWidth + l - offset < imageWidth) && (i%imageWidth + k - offset >0) && (i%imageWidth + l - offset < imageHeight))                        //COnditions if the filter falls over the image or off. First 2 check the width and last 2 check the heights
+			if((i+l-offset+(k-offset)*imageWidth > 0) && (i+l-offset+(k-offset)*imageWidth< imageWidth*imageHeight) && (i%imageWidth + l - offset > 0) && (i%imageWidth + l - offset < imageWidth) && (i%imageHeight + k - offset >0) && (i%imageHeight +k - offset < imageHeight))                        //COnditions if the filter falls over the image or off. First 2 check the width and last 2 check the heights
+
 				sum+= ddata[i+l-offset+(k-offset)*imageWidth]*dconstantFilter[l+k*filterDim] ;
 			}
 		}
+
 		if(sum<0)
 			sum=0;                                                     //normalise values
 		if(sum>1)
 			sum=1 ;
-
+///printf("%f %f  %f ",dconstantFilter[0],dconstantFilter[1],dconstantFilter[2]);
 			doutput[i] = sum ;                                      //assign output
 
 }
@@ -117,7 +119,7 @@ __global__ void GPUNaiveConv(float* ddata, float* doutput, float* filter, int im
 
 	for(k=0; k<filterDim; k++){
 		for(l=0; l<filterDim ; l++){
-			if((i%imageWidth + l - offset > 0) && (i%imageWidth + l - offset < imageWidth) && (i%imageWidth + k - offset >0) && (i%imageWidth + l - offset < imageHeight))                        //COnditions if the filter falls over the image or off. First 2 check the width and last 2 check the heights
+			if((i+l-offset+(k-offset)*imageWidth > 0) && (i+l-offset+(k-offset)*imageWidth< imageWidth*imageHeight) && (i%imageWidth + l - offset > 0) && (i%imageWidth + l - offset < imageWidth) && (i%imageHeight + k - offset >0) && (i%imageHeight +k - offset < imageHeight))                        //COnditions if the filter falls over the image or off. First 2 check the width and last 2 check the heights
 				sum+= ddata[i+l-offset+(k-offset)*imageWidth]*filter[l+k*filterDim] ;
 		}
 	}
@@ -139,12 +141,12 @@ void CPUConv(float* hdata, float* houtput, float* filter, int imageWidth, int im
 	int i,k,l;                          //counting variables
 	float sum;                          //temp sum
 	int offset = floor(filterDim/2);     //bounds for inner loop
-
+	printf("%d \n",imageWidth*imageHeight);
 	for(i=0; i< imageWidth*imageHeight; i++){
 		sum=0.0;
 		for(k=0; k<filterDim; k++){
 			for(l=0; l<filterDim ; l++){
-				if((i+l-offset+(k-offset)*imageWidth > 0) && (i+l-offset+(k-offset)*imageWidth < imageWidth*imageHeight) && (i%imageWidth + l - offset > 0) && (i%imageWidth + l - offset < imageWidth) && (i%imageWidth + k - offset >0) && (i%imageWidth + l - offset < imageHeight))                        //COnditions if the filter falls over the image or off. First 2 check the width and last 2 check the heights
+				if((i+l-offset+(k-offset)*imageWidth > 0) && (i+l-offset+(k-offset)*imageWidth< imageWidth*imageHeight) && (i%imageWidth + l - offset > 0) && (i%imageWidth + l - offset < imageWidth) && (i%imageHeight + k - offset >0) && (i%imageHeight +k - offset < imageHeight))                        //COnditions if the filter falls over the image or off. First 2 check the width and last 2 check the heights
 					sum+= hdata[i+l-offset+(k-offset)*imageWidth]*filter[l+k*filterDim] ;
 			}
 		}
@@ -171,8 +173,8 @@ int main(int argc, char **argv){
 
 //DEFINE FILTER HERE====================================
 //	float filter[] ={0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0};                 //returns original image
-	 float filter[] ={-1.0,0.0,1.0,-2.0,0.0,2.0,-1.0,0.0,1.0};            //highlights edges
-//	float filter[] ={-1.0,-1.0,-1.0,-1.0,9.0,-1.0,-1.0,-1.0,-1.0};      //sharpens image
+//	 float filter[] ={-1.0,0.0,1.0,-2.0,0.0,2.0,-1.0,0.0,1.0};            //highlights edges
+	float filter[] ={-1.0,-1.0,-1.0,-1.0,9.0,-1.0,-1.0,-1.0,-1.0};      //sharpens image
 //	float filter[] ={1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0};   //slightly blurs image
 
 	int filterDim=FILTERDIM;  						//dimensions of the filter, assume its square
@@ -185,7 +187,7 @@ int main(int argc, char **argv){
     	}
 
     	sdkLoadPGM(imagePath, &hData, &width, &height);             //load image into hdata and initialize width and height, hdata is a 1D array
-
+			printf("%d %d \n", width,height);
     	unsigned int size = width * height * sizeof(float);                 //get total size of image (length of array) in bytes
     	float *hOutputData = (float *) malloc(size);                        //create an array to store the final
 
@@ -270,7 +272,7 @@ cudaMalloc((void**)&dconstantFilter, filterDim*filterDim*sizeof(float));       /
 
 	cudaMemcpy(dcData, hData, size, cudaMemcpyHostToDevice);            //Copy the image to the device
 	cudaMemcpy(dcFilter, filter, filterDim*filterDim*sizeof(float), cudaMemcpyHostToDevice);	   //copy the filter to the device
-	cudaMemcpyToSymbol(dconstantFilter,dcFilter,sizeof(float *)*filterDim*filterDim,0,cudaMemcpyHostToDevice) ;
+	cudaMemcpyToSymbol(dconstantFilter,filter,sizeof(float)*filterDim*filterDim,0,cudaMemcpyHostToDevice) ;
 
 
 	const size_t cblock_size = 256;                                 //initialise block size
@@ -292,7 +294,7 @@ cudaMalloc((void**)&dconstantFilter, filterDim*filterDim*sizeof(float));       /
 	 		cudaEventElapsedTime(&time, launch_begin, launch_end);
 
 	 // copy the result back to the host memory space
-	 cudaMemcpy(hOutputData, dOutput, size, cudaMemcpyDeviceToHost);
+	 cudaMemcpy(hOutputData, dcOutput, size, cudaMemcpyDeviceToHost);
 	 printf("GPU Const run time: %fms\n", time);
 
 	 sdkSavePGM("Image_CONST_OUT.pgm",hOutputData,width,height);
@@ -314,7 +316,7 @@ cudaMalloc((void**)&dtFilter, filterDim*filterDim*sizeof(float));       //assign
 	}
 
 
-	cudaChannelFormatDesc channelDesc =
+/*	cudaChannelFormatDesc channelDesc =
 			cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
 	cudaArray *cuArray;
 	checkCudaErrors(cudaMallocArray(&cuArray,
@@ -334,8 +336,10 @@ cudaMalloc((void**)&dtFilter, filterDim*filterDim*sizeof(float));       //assign
 	tex.filterMode = cudaFilterModeLinear;
 	tex.normalized = true;    // access with normalized texture coordinates
 
-	// Bind the array to the texture
-	checkCudaErrors(cudaBindTextureToArray(tex, cuArray, channelDesc));
+	// Bind the array to the texture*
+	checkCudaErrors(cudaBindTextureToArray(tex, cuArray, channelDesc));*/
+	checkCudaErrors(cudaBindTexture( tex, hData,size));
+
 
 
 	const size_t tblock_size = 256;                                 //initialise block size
@@ -356,7 +360,7 @@ cudaMalloc((void**)&dtFilter, filterDim*filterDim*sizeof(float));       //assign
 	 		cudaEventElapsedTime(&time, launch_begin, launch_end);
 
 	 // copy the result back to the host memory space
-	 cudaMemcpy(hOutputData, dOutput, size, cudaMemcpyDeviceToHost);
+	 cudaMemcpy(hOutputData, dtOutput, size, cudaMemcpyDeviceToHost);
 	 printf("GPU Texture run time: %fms\n", time);
 
 	 sdkSavePGM("Image_TEXT_OUT.pgm",hOutputData,width,height);
