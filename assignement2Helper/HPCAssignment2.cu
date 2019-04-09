@@ -32,66 +32,33 @@ const char *sampleName = "HPCAssignment2.cu";
 
 //Texture memory kernel======================================================================================
 __global__ void GPUTextureConv(float* doutput, float* filter, int width, int height, int filterDim){
-		unsigned int x = blockIdx.x*blockDim.x + threadIdx.x;
-    unsigned int y = blockIdx.y*blockDim.y + threadIdx.y;
 
-    float u = (float)x +0.5f;//- (float)width/2;
-    float v = (float)y +0.5f;//- (float)height/2;
-	//	float tu,tv;
-		int offset = ((filterDim-1)/2);
-		int i = y*width +x ;
-		float sum=0.0;
+		unsigned int x = blockIdx.x*blockDim.x + threadIdx.x;           //calculate x coord
+    unsigned int y = blockIdx.y*blockDim.y + threadIdx.y;                       //calculate y coord
+
+    float u = (float)x +0.5f;                                                //convert x and y coordinate, include pixel width to get center 
+    float v = (float)y +0.5f;
+	
+		int offset = ((filterDim-1)/2);                              //calculate offset from the filter, so if its 3x3 it will be 1
+		int i = y*width +x ;                                       //calculate index in the 1D array for output data
+		float sum=0.0;                                           //initlize sum
 
 		for(int k=0;k<filterDim;k++){
 			for(int l = 0; l<filterDim;l++){
-			if((u-offset+l >= 0 )&&(u-offset+l < width ) && (v-offset+k >=0) && (v-offset+k < height))
-			sum+=	tex2D(tex,u-offset+l,v-offset+k)*filter[l+k*filterDim];
+			if((u-offset+l >= 0 )&&(u-offset+l < width ) && (v-offset+k >=0) && (v-offset+k < height))  //make sure point is within image boundary
+			sum+=	tex2D(tex,u-offset+l,v-offset+k)*filter[l+k*filterDim];     //fetch pixel data from texture memory and multiply by corresponding filter value
 			}
 		}
 
-		if(sum<0)
+		if(sum<0)                    //normalize
 			sum=0;
 		if(sum>1)
 			sum=1 ;
-			doutput[i] = sum;
+			doutput[i] = sum;       
 	}
 
 
-//================================
-
-//First attempt
-__global__ void GPU1TextureConv(float* doutput, float* filter, int imageWidth, int imageHeight, int filterDim){
-	int k,l;                          //counting variables
-	float sum=0.0;                          //temp sum
-	int offset = ((filterDim-1)/2);     //bounds for inner loop
-	int tu,tv;
-	//int tt ;
-	unsigned int x = blockIdx.x*blockDim.x + threadIdx.x;              //find x dimension
-	unsigned int y = blockIdx.y*blockDim.y + threadIdx.y;		           //find y dimension
-	float u=(x+0.5f)/ (float) imageWidth;
-	float v=(y +0.5f)/ (float) imageHeight ;
-
-	int i = y*imageWidth+ x ;                                          //find unique index for each gpu
-
-
-	for(k=0; k<filterDim; k++){                                       //calculate CONVOLUTION
-		for(l=0; l<filterDim ; l++){
-			if((i%imageWidth + l - offset > 0) && (i%imageWidth + l - offset < imageWidth) && (i%imageHeight + k - offset >0) && (i%imageHeight +k - offset < imageHeight))                        //COnditions if the filter falls over the image or off. First 2 check the width and last 2 check the heights
-			   tu = u+l-offset;
-				 tv = v+k-offset;
-				 printf("%f ", tex2D(tex,tu,tv)) ;
-			//	 tt = i+l-offset+(k-offset)*imageWidth;
-				sum+= tex2D(tex,tu,tv)*filter[l+k*filterDim] ;
-			}
-		}
-		if(sum<0)
-			sum=0;                                                     //normalise values
-		if(sum>1)
-			sum=1 ;
-
-			doutput[i] = sum ;                                      //assign output
-
-}
+//===========================================================================================================
 
 
 
@@ -107,7 +74,7 @@ __global__ void GPU1TextureConv(float* doutput, float* filter, int imageWidth, i
 
 
 }*/
-__constant__ float dconstantFilter[FILTERDIM*FILTERDIM];
+__constant__ float dconstantFilter[FILTERDIM*FILTERDIM];            //define array for filter in constant memory
 //CONSTANT MEMORY FILTER IMPLEMENTATION======================================================================
 __global__ void GPUConstantConv(float* ddata,const float *__restrict__ kernel, float* doutput,int imageWidth, int imageHeight, int filterDim){
 
@@ -132,7 +99,6 @@ __global__ void GPUConstantConv(float* ddata,const float *__restrict__ kernel, f
 			sum=0;                                                     //normalise values
 		if(sum>1)
 			sum=1 ;
-///printf("%f %f  %f ",dconstantFilter[0],dconstantFilter[1],dconstantFilter[2]);
 			doutput[i] = sum ;                                      //assign output
 
 }
@@ -245,6 +211,7 @@ CPUConv(hData,hOutputData,filter,width,height,filterDim);   //Run cpu version
 	 printf("CPU run time: %fms\n", time);
 	 sdkSavePGM("Image_CPU_OUT.pgm",hOutputData,width,height);
 //======================================
+
  //Run Naive GPU VERSION=================
 	//UNTESTED
 	float *dData = 0;
@@ -326,7 +293,6 @@ cudaMalloc((void**)&dconstantFilter, filterDim*filterDim*sizeof(float));       /
 	 cudaEventRecord(launch_end,0);
 	 cudaEventSynchronize(launch_end);
 	 // measure the time (ms) spent in the kernel
-	 //	 float time = 0;
 	 		cudaEventElapsedTime(&time, launch_begin, launch_end);
 
 	 // copy the result back to the host memory space
@@ -340,8 +306,9 @@ cudaMalloc((void**)&dconstantFilter, filterDim*filterDim*sizeof(float));       /
 //TEXTURE MEMORY IMPLEMENTATION ====================================
 //float *dData = NULL;
 
-	float *dtFilter = 0;
-	cudaMalloc((void**)&dtFilter, filterDim*filterDim*sizeof(float));
+	float *dtFilter = 0;                               //create pointer for filter
+
+	cudaMalloc((void**)&dtFilter, filterDim*filterDim*sizeof(float)); 				//allocate memory for filter
 	cudaMemcpy(dtFilter, filter, filterDim*filterDim*sizeof(float), cudaMemcpyHostToDevice);	   //copy the filter to the device
 
 	 checkCudaErrors(cudaMalloc((void **) &dData, size));
@@ -370,11 +337,11 @@ cudaMalloc((void**)&dconstantFilter, filterDim*filterDim*sizeof(float));       /
 	 // Bind the array to the texture
 	 checkCudaErrors(cudaBindTextureToArray(tex, cuArray, channelDesc));
 
-	 dim3 dimBlock(8, 8, 1);
+	 dim3 dimBlock(8, 8, 1);				//initlise block and grid size, 2D
 	 dim3 dimGrid(width / dimBlock.x, height / dimBlock.y, 1);
 
-	 checkCudaErrors(cudaDeviceSynchronize());
-	 StopWatchInterface *timer = NULL;
+	 checkCudaErrors(cudaDeviceSynchronize());       //wait for all threads
+	 StopWatchInterface *timer = NULL;            //start timer
 	 sdkCreateTimer(&timer);
 	 sdkStartTimer(&timer);
 
@@ -386,96 +353,14 @@ cudaMalloc((void**)&dconstantFilter, filterDim*filterDim*sizeof(float));       /
 
 	 checkCudaErrors(cudaDeviceSynchronize());
 	 sdkStopTimer(&timer);
-				//	(width *height / (sdkGetTimerValue(&timer) / 1000.0f)) / 1e6);
 	 sdkDeleteTimer(&timer);
 
-	 // Allocate mem for the result on host side
-	// float *hOutputData = (float *) malloc(size);
 	 // copy result from device to host
 	 checkCudaErrors(cudaMemcpy(hOutputData,
 															dData,
 															size,
 															cudaMemcpyDeviceToHost));
 
-/*float *dtOutput = 0;
-float *dtFilter = 0;
-float *dtData = 0;
-
-
-cudaMalloc((void**)&dtOutput, size);
-cudaMalloc((void**)&dtFilter, filterDim*filterDim*sizeof(float));       //assign the space required for the above arrays
-cudaMalloc((void**)&dtData, size);
-
- if(dtOutput == 0 || dtFilter == 0|| dtData ==0)                       //check if the arrays actually initialised properly
-	{
-		printf("couldn't allocate device memory (texture)\n");
-		return 1;
-	}
-
-
-	cudaChannelFormatDesc channelDesc =
-			cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
-	cudaArray *cuArray;
-	checkCudaErrors(cudaMallocArray(&cuArray,
-																	&channelDesc,
-																	width,
-																	height));
-	checkCudaErrors(cudaMemcpyToArray(cuArray,
-																		0,
-																		0,
-																		hData,
-																		size,
-																		cudaMemcpyHostToDevice));
-
-	// Set texture parameters
-	tex.addressMode[0] = cudaAddressModeWrap;
-	tex.addressMode[1] = cudaAddressModeWrap;
-	tex.filterMode = cudaFilterModeLinear;
-	tex.normalized = true;    // access with normalized texture coordinates
-
-	// Bind the array to the texture*
-	checkCudaErrors(cudaBindTextureToArray(tex, cuArray, channelDesc));
-//	checkCudaErrors(cudaMemcpy(dtData, hData, size, cudaMemcpyHostToDevice));
-	//checkCudaErrors(cudaBindTexture(NULL, tex, dtData,size));
-
-		dim3 dimBlock(8, 8, 1);
-    dim3 dimGrid(width / dimBlock.x, height / dimBlock.y, 1);
-
-		 cudaEventCreate(&launch_begin);
-		 cudaEventCreate(&launch_end);
-		 // record a CUDA event immediately before and after the kernel launch
-		 cudaEventRecord(launch_begin,0);
-     GPUTextureConv<<<dimGrid, dimBlock, 0>>>(dData,dtFilter, width, height,filterDim);
-		 cudaEventRecord(launch_end,0);
-		cudaEventSynchronize(launch_end);
-		// measure the time (ms) spent in the kernel
-			 cudaEventElapsedTime(&time, launch_begin, launch_end);
-
-		// copy the result back to the host memory space
-		cudaMemcpy(hOutputData, dtData, size, cudaMemcpyDeviceToHost);
-
-
-
-
-	/*const size_t tblock_size = 256;                                 //initialise block size
-	size_t tgrid_size = width*height / tblock_size;                   // calculate gride size
-
-  	// deal with a possible partial final block
- 	 if(width*height % block_size) ++tgrid_size;
-
-	 cudaEventCreate(&launch_begin);
-	 cudaEventCreate(&launch_end);
-	 // record a CUDA event immediately before and after the kernel launch
-	 cudaEventRecord(launch_begin,0);
-	 // launch the kernel
-	 GPUTextureConv<<<tgrid_size, tblock_size>>>(dtOutput,dtFilter,width,height,filterDim) ;          //Call the kernal
-	 cudaEventRecord(launch_end,0);
-	 cudaEventSynchronize(launch_end);
-	 // measure the time (ms) spent in the kernel
-	 		cudaEventElapsedTime(&time, launch_begin, launch_end);
-
-	 // copy the result back to the host memory space
-	 cudaMemcpy(hOutputData, dtOutput, size, cudaMemcpyDeviceToHost);*/
 	 printf("GPU Texture run time: %fms\n", time);
 
 	 sdkSavePGM("Image_TEXT_OUT.pgm",hOutputData,width,height);
