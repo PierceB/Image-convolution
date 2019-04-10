@@ -51,10 +51,12 @@ __global__ void GPUTextureConv(float* doutput, float* filter, int width, int hei
 		}
 
 		if(sum<0)                    //normalize
-			sum=0;
+			sum=0.0;
 		if(sum>1)
-			sum=1 ;
+			sum=1.0 ;
+
 			doutput[i] = sum;
+
 	}
 
 
@@ -63,11 +65,52 @@ __global__ void GPUTextureConv(float* doutput, float* filter, int width, int hei
 
 //SHARED MEMORY TILING IMPLEMENTATION===========================================
 //do later
-__global__ void GPUSharedConv(float* ddata, float* doutput, float* filter,int blockWidth, int imageWidth, int imageHeight, int filterDim){
+__global__ void GPUSharedConv(float* ddata, float* doutput, float* filter, int imageWidth, int imageHeight, int filterDim){
+
+
+__shared__ float shared_block[PW][PW] ;  //initlise tile of image in  shared memory
+
+	int offset = filterDim/2 ;          //calculate offset
+
+	int i = threadIdx.y*TILE_WIDTH + threadIdx.x;      //get index
+	int iy = i/PW ;                                 //get y index for tiled shared memory
+	int ix = i%PW ;                                 // get x index for tiled shared memory
+
+	int indexY = blockIdx.y*TILE_WIDTH + iy - offset ;         //get index with reference to ddata
+	int indexX = blockIdx.x*TILE_WIDTH + ix - offset ;
+	int index = indexY*imageWidth + indexX ;
 
 
 
+	if((indexY >= 0) && (indexY < imageHeight) && (indexX >=0) && (indexX < imageWidth)){ //check if index in bounds
+	shared_block[iy][ix] = ddata[index];  //copy into shared memory
+}else{
+	shared_block[iy][ix] = 0.0;
+}
 
+	__syncthreads() ;  //wait for threads to catch up
+
+	float sum = 0 ;  //initialise sum variable
+
+	int k,l;             // counting variables
+
+	for(k= 0; k < filterDim ; k++){
+		for( l=0; l <filterDim; l++){
+			sum+= shared_block[threadIdx.y+k][threadIdx.x+l]*filter[k*filterDim + l]; //do the convolution
+		}
+	}
+
+	int y = blockIdx.y*TILE_WIDTH + threadIdx.y;   //get y index with refernece to image
+	int x = blockIdx.x*TILE_WIDTH + threadIdx.x;  //get x index with reference to image
+
+	if(y<imageHeight && x<imageWidth){
+		if(sum>1)  //threshhold function
+		sum=1 ;
+		if(sum<0)
+		sum=0;
+		doutput[y*imageWidth + x] = sum ;   //assign final value
+		__syncthreads();
+}
 
 }
 
@@ -79,7 +122,6 @@ __global__ void GPUConstantConv(float* ddata,const float *__restrict__ kernel, f
 	int k,l;                          //counting variables
 	float sum=0.0;                          //temp sum
 	int offset = ((filterDim-1)/2);     //bounds for inner loop
-
 	unsigned int x = blockIdx.x*blockDim.x + threadIdx.x;              //find x dimension
 	unsigned int y = blockIdx.y*blockDim.y + threadIdx.y;		           //find y dimension
 
@@ -155,7 +197,7 @@ void CPUConv(float* hdata, float* houtput, float* filter, int imageWidth, int im
 			sum=0;
 		if(sum>1)
 			sum=1 ;
-		houtput[i] = sum ;
+		 houtput[i] = sum ;
 	}
 
 }
@@ -253,6 +295,57 @@ int main(int argc, char **argv){
 		printf("GPU Naive run time: %fms\n", ngtime);
 
 		sdkSavePGM("Image_NAIVE_OUT.pgm",hOutputData,width,height);               //save the new image as Image_out.pgm
+//==============================================================================
+
+//Shared memory implementation of convolution===================================
+cudaEvent_t cslaunch_begin, cslaunch_end;
+
+float *hsOutputData = (float *) malloc(size);
+
+float *dsData = 0;
+float *dsOutput = 0;
+float *dsFilter = 0;
+
+cudaMalloc((void**)&dsData, size);
+cudaMalloc((void**)&dsOutput, size);
+cudaMalloc((void**)&dsFilter, filterDim*filterDim*sizeof(float));       //assign the space required for the above arrays
+
+
+if(dsOutput == 0 || dsData == 0 || dsFilter == 0)                       //check if the arrays actually initialised properly
+{
+	printf("couldn't allocate device memory (shared)\n");
+	return 1;
+}
+
+int offset = ((filterDim-1)/2);
+
+
+
+dim3 sdimGrid(ceil((float) width/TILE_WIDTH), ceil((float) height/TILE_WIDTH));				//initlise block and grid size, 2D
+dim3 sdimBlock(TILE_WIDTH,TILE_WIDTH);
+
+
+ checkCudaErrors(cudaMemcpy(dsData, hData, size, cudaMemcpyHostToDevice));            //Copy the image to the device
+ checkCudaErrors(cudaMemcpy(dsFilter, filter, filterDim*filterDim*sizeof(float), cudaMemcpyHostToDevice));	   //copy the filter to the device
+
+ cudaEventCreate(&cslaunch_begin);
+ cudaEventCreate(&cslaunch_end);
+ // record a CUDA event immediately before and after the kernel launch
+ cudaEventRecord(cslaunch_begin,0);
+ // launch the kernel
+ GPUSharedConv<<<sdimGrid, sdimBlock>>>(dsOutput,dsData,dsFilter, width, height,filterDim);
+ cudaEventRecord(cslaunch_end,0);
+ cudaEventSynchronize(cslaunch_end);
+ // measure the time (ms) spent in the kernel
+		float cstime =0;
+		cudaEventElapsedTime(&cstime, cslaunch_begin, cslaunch_end);
+
+ // copy the result back to the host memory space
+ cudaMemcpy(hOutputData, dOutput, size, cudaMemcpyDeviceToHost);
+ printf("GPU Shared run time: %fms\n", cstime);
+
+ sdkSavePGM("Image_SHARED_OUT.pgm",hOutputData,width,height);
+
 //==============================================================================
 
 //RUN THE CONSTANT MEMORY GPU implementation====================================
@@ -360,52 +453,7 @@ int main(int argc, char **argv){
 //==============================================================================
 
 
-/*//Shared memory implementation of convolution===================================
-cudaEvent_t cslaunch_begin, cslaunch_end;
 
-float *dsData = 0;
-float *dsOutput = 0;
-float *dsFilter = 0;
-
-cudaMalloc((void**)&dsData, size);
-cudaMalloc((void**)&dsOutput, size);
-cudaMalloc((void**)&dsFilter, filterDim*filterDim*sizeof(float));       //assign the space required for the above arrays
-
-
-if(dsOutput == 0 || dsData == 0 || dsFilter == 0)                       //check if the arrays actually initialised properly
-{
-	printf("couldn't allocate device memory (shared)\n");
-	return 1;
-}
-
-int offset = ((filterDim-1)/2);
-
-dim3 sdimBlock(TILE_WIDTH+2*offset, TILE_WIDTH+2*offset, 1);				//initlise block and grid size, 2D
-dim3 sdimGrid(width / dimBlock.x, height / dimBlock.y, 1);
-
-
- cudaMemcpy(dsData, hData, size, cudaMemcpyHostToDevice);            //Copy the image to the device
- cudaMemcpy(dsFilter, filter, filterDim*filterDim*sizeof(float), cudaMemcpyHostToDevice);	   //copy the filter to the device
-
- cudaEventCreate(&cslaunch_begin);
- cudaEventCreate(&cslaunch_end);
- // record a CUDA event immediately before and after the kernel launch
- cudaEventRecord(cslaunch_begin,0);
- // launch the kernel
- GPUSharedConv<<<sdimGrid, sdimBlock, 0>>>(dsOutput,dsData,dsFilter, width, height,filterDim);
- cudaEventRecord(cslaunch_end,0);
- cudaEventSynchronize(cslaunch_end);
- // measure the time (ms) spent in the kernel
-		float cstime =0;
-		cudaEventElapsedTime(&cstime, cslaunch_begin, cslaunch_end);
-
- // copy the result back to the host memory space
- cudaMemcpy(hOutputData, dsOutput, size, cudaMemcpyDeviceToHost);
- printf("GPU Shared run time: %fms\n", cstime);
-
- sdkSavePGM("Image_SHARED_OUT.pgm",hOutputData,width,height);*/
-
-//==============================================================================
 
 
 //	sdkSavePGM("Image_OUT.pgm",hOutputData,width,height);               //save the new image as Image_out.pgm
