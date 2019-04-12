@@ -77,11 +77,11 @@ __global__ void GPUSharedConv(float* doutput,float* ddata,  float* filter, int i
 
 	int indexY = blockIdx.y*TILE_WIDTH + iy- offset ;         //get index with reference to ddata
 	int indexX = blockIdx.x*TILE_WIDTH + ix - offset ;
-	int index = indexY*imageWidth + indexX ;
+	
 
 
 	if((indexY >= 0) && (indexY < imageHeight) && (indexX >=0) && (indexX < imageWidth)){ //check if index in bounds
-		shared_block[iy][ix] = ddata[index];  //copy into shared memory
+		shared_block[iy][ix] = ddata[indexY*imageWidth + indexX ;];  //copy into shared memory
 	}else{
 		shared_block[iy][ix] = 0.0;            //pad the array,
 	}
@@ -94,12 +94,12 @@ __global__ void GPUSharedConv(float* doutput,float* ddata,  float* filter, int i
 //get index with reference to ddata
  indexY = blockIdx.y*TILE_WIDTH + iy - offset ;
  indexX = blockIdx.x*TILE_WIDTH + ix - offset ;
- index = indexY*imageWidth + indexX ;
+ //index = indexY*imageWidth + indexX ;
 
 
 	if(iy < PW){             //if thread is within the shared memory space
 		if((indexY >= 0) && (indexY < imageHeight) && (indexX >=0) && (indexX < imageWidth)){ //check if index in bounds
-			shared_block[iy][ix] = ddata[index];  //copy into shared memory
+			shared_block[iy][ix] = ddata[indexY*imageWidth + indexX];  //copy into shared memory
 		}else{
 			shared_block[iy][ix] = 0.0;         //PAD
 		}
@@ -147,7 +147,7 @@ __global__ void GPUSharedConv(float* doutput,float* ddata,  float* filter, int i
 
 __constant__ float dconstantFilter[FILTERDIM*FILTERDIM];            //define array for filter in constant memory
 //CONSTANT MEMORY FILTER IMPLEMENTATION=========================================
-__global__ void GPUConstantConv(float* ddata,const float *__restrict__ kernel, float* doutput,int imageWidth, int imageHeight, int filterDim){
+__global__ void GPUConstantConv(float* ddata,const float *__restrict__ dconstantFilter, float* doutput,int imageWidth, int imageHeight, int filterDim){
 
 	int k,l;                          //counting variables
 	float sum=0.0;                          //temp sum
