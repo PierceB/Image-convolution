@@ -23,12 +23,43 @@
 #define FILTERDIM 3                     //CHANGE THIS WHEN USING DIFFERENT MASK SIZE
 #define PW (TILE_WIDTH + FILTERDIM - 1 )
 
+//FILTERS=======================================================================
+
+//3x3 filters
+
+//Edge detection 3x3
+float filter[] = {-1.0, 0.0, 1.0, -2.0, 0.0, 2.0, -1.0, 0.0, 1.0};
+//Sharpening 3x3
+// float filter[] = {-1.0, -1.0, -1.0, -1.0, 9, -1.0, -1.0, -1.0, -1.0};
+// //blur/average 3x3
+// float filter[] = {0.111, 0.111, 0.111, 0.111, 0.111, 0.111, 0.111, 0.111, 0.111};
+//
+// //5x5 filters
+//
+// //Sharpening 5x5
+// float filter[] = {-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,-1.0, -1.0, 25, -1.0, -1.0,-1.0, -1.0, -1.0, -1.0, -1.0,-1.0, -1.0, -1.0, -1.0, -1.0};
+// //Averaging 5x5
+// float filter[] = {0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04,0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04,};
+//
+// //7x7 Filters
+//
+// //sharpening 7x7
+ //float filter[] = {-1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0,-1.0, -1.0, -1.0, 49, -1.0, -1.0 ,-1.0,- 1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0};
+//
+//
+// 	//Averaging
+// float filter[] = {1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,}
+//==============================================================================
+
+
+
 texture<float, 2, cudaReadModeElementType> tex;
 
-const char *imageFilename = "image21.pgm";
+const char *imageFilename = "lena_bw.pgm";
 
 const char *sampleName = "HPCAssignment2.cu";
 
+//KERNELS ======================================================================
 
 //Texture memory kernel=========================================================
 __global__ void GPUTextureConv(float* doutput, float* filter, int width, int height, int filterDim){
@@ -62,11 +93,11 @@ __global__ void GPUTextureConv(float* doutput, float* filter, int width, int hei
 
 //==============================================================================
 
-
+//SHARED MEMORY KERNEL==========================================================
 __global__ void GPUSharedConv(float* doutput,float* ddata,  float* filter, int imageWidth, int imageHeight, int filterDim){
 
 
-	__shared__ float shared_block[TILE_WIDTH + FILTERDIM*2][TILE_WIDTH + FILTERDIM*2] ;  //initlise tile of image in  shared memory
+	__shared__ float shared_block[PW][PW] ;  //initlise tile of image in  shared memory
 
 	int offset = filterDim/2 ;          //calculate offset
 
@@ -77,11 +108,11 @@ __global__ void GPUSharedConv(float* doutput,float* ddata,  float* filter, int i
 
 	int indexY = blockIdx.y*TILE_WIDTH + iy- offset ;         //get index with reference to ddata
 	int indexX = blockIdx.x*TILE_WIDTH + ix - offset ;
-	
+  int index = indexY*imageWidth + indexX ;
 
 
 	if((indexY >= 0) && (indexY < imageHeight) && (indexX >=0) && (indexX < imageWidth)){ //check if index in bounds
-		shared_block[iy][ix] = ddata[indexY*imageWidth + indexX ;];  //copy into shared memory
+		shared_block[iy][ix] = ddata[index];  //copy into shared memory
 	}else{
 		shared_block[iy][ix] = 0.0;            //pad the array,
 	}
@@ -94,28 +125,16 @@ __global__ void GPUSharedConv(float* doutput,float* ddata,  float* filter, int i
 //get index with reference to ddata
  indexY = blockIdx.y*TILE_WIDTH + iy - offset ;
  indexX = blockIdx.x*TILE_WIDTH + ix - offset ;
- //index = indexY*imageWidth + indexX ;
+ index = indexY*imageWidth + indexX ;
 
 
 	if(iy < PW){             //if thread is within the shared memory space
 		if((indexY >= 0) && (indexY < imageHeight) && (indexX >=0) && (indexX < imageWidth)){ //check if index in bounds
-			shared_block[iy][ix] = ddata[indexY*imageWidth + indexX];  //copy into shared memory
+			shared_block[iy][ix] = ddata[index];  //copy into shared memory
 		}else{
 			shared_block[iy][ix] = 0.0;         //PAD
 		}
 	}
-
-//Psycadelic code
-// int ti = (threadIdx.x + threadIdx.y*imageWidth)%imageWidth;
-// int ts =(threadIdx.y + threadIdx.x*imageHeight)%imageHeight;
-//
-// for(int i = 0; i<imageWidth/PW;++i){
-// if(( ti> offset ) && (ti < imageWidth-offset) && (ts > offset) && (ts < imageHeight- offset)){
-// 	shared_block[threadIdx.y][threadIdx.x] = ddata[rowOut*colOut +  i*PW+threadIdx.x];
-// }else{
-// 	shared_block[threadIdx.y][threadIdx.x] = 0.0f ;
-// }
-// }
 
 	__syncthreads() ;  //wait for threads to catch up
 
@@ -144,10 +163,12 @@ __global__ void GPUSharedConv(float* doutput,float* ddata,  float* filter, int i
 
 }
 
+//==============================================================================
 
 __constant__ float dconstantFilter[FILTERDIM*FILTERDIM];            //define array for filter in constant memory
+
 //CONSTANT MEMORY FILTER IMPLEMENTATION=========================================
-__global__ void GPUConstantConv(float* ddata,const float *__restrict__ dconstantFilter, float* doutput,int imageWidth, int imageHeight, int filterDim){
+__global__ void GPUConstantConv(float* ddata, float* doutput,int imageWidth, int imageHeight, int filterDim){
 
 	int k,l;                          //counting variables
 	float sum=0.0;                          //temp sum
@@ -175,9 +196,8 @@ __global__ void GPUConstantConv(float* ddata,const float *__restrict__ dconstant
 
 //==============================================================================
 
-//==============================================================================
-
 //NAIVE GPU IMPLEMENTATION OF CONVOLUTION=======================================
+
 __global__ void GPUNaiveConv(float* ddata, float* doutput, float* filter, int imageWidth, int imageHeight, int filterDim){
 
 	int k,l;                          //counting variables
@@ -203,10 +223,12 @@ __global__ void GPUNaiveConv(float* ddata, float* doutput, float* filter, int im
 
 
 }
+
 //==============================================================================
 
 
 //CPU IMPLEMENTATION OF CONVOLUTION=============================================
+
 void CPUConv(float* hdata, float* houtput, float* filter, int imageWidth, int imageHeight, int filterDim){
 
 	int i,k,l;                          //counting variables
@@ -233,6 +255,10 @@ void CPUConv(float* hdata, float* houtput, float* filter, int imageWidth, int im
 
 //==============================================================================
 
+//TESTS=========================================================================
+
+//Run CPU test with timings=====================================================
+
 void runCPUTest(float* hData, unsigned int width, unsigned int height,int filterDim,int size,float* filter){
 	float *hOutputData = (float *) malloc(size);                        //create an array to store the final
 
@@ -253,14 +279,28 @@ void runCPUTest(float* hData, unsigned int width, unsigned int height,int filter
 	sdkSavePGM("Image_CPU_OUT.pgm",hOutputData,width,height);
 	free(hOutputData);
 }
+
 //==============================================================================
 
+//Run naive kernel test=========================================================
 
 int runNaiveTest(float* hData, unsigned int width, unsigned int height,int filterDim,int size,float* filter){
 
 
 		 float *hOutputData = (float *) malloc(size);
-		 cudaEvent_t nglaunch_begin, nglaunch_end;
+		 cudaEvent_t nglaunch_begin, nglaunch_end,total_begin,total_end;
+
+//record total time including memory addresses
+		 cudaEventCreate(&total_begin);
+		 cudaEventCreate(&total_end);
+		 cudaEventRecord(total_begin,0);
+
+
+		cudaEventCreate(&nglaunch_begin);
+	 	cudaEventCreate(&nglaunch_end);
+	 // record a CUDA event for the entire
+	 	cudaEventRecord(nglaunch_begin,0);
+
 		 float *dData = 0;
 		 float *dOutput = 0;
 		 float *dFilter = 0;                      //create arrays we will need to give to device
@@ -299,21 +339,45 @@ int runNaiveTest(float* hData, unsigned int width, unsigned int height,int filte
 
 	  // copy the result back to the host memory space
 	  	cudaMemcpy(hOutputData, dOutput, size, cudaMemcpyDeviceToHost);
+
+			checkCudaErrors(cudaFree(dData)); //fre all cuda memory used
+			checkCudaErrors(cudaFree(dOutput));
+			checkCudaErrors(cudaFree(dFilter));
+
+			cudaEventRecord(total_end,0);
+			cudaEventSynchronize(total_end);
+		// measure the time (ms) spent in the kernel
+			float totaltime = 0;
+			cudaEventElapsedTime(&totaltime, total_begin, total_end);
+
+
+//print time results
+			printf("\nGPU NAIVE TIMES =====================\n");
 			printf("GPU Naive run time: %fms\n", ngtime);
+			printf("GPU NAIVE Memory allocation time: %fms \n", totaltime-ngtime) ;
+			printf("GPU NAIVE TOTAL TIME: %fms \n",totaltime);
+			printf("===================================== \n \n");
+
 
 			sdkSavePGM("Image_NAIVE_OUT.pgm",hOutputData,width,height);               //save the new image as Image_out.pgm
 
 			free(hOutputData);
-			checkCudaErrors(cudaFree(dData));
-			checkCudaErrors(cudaFree(dOutput));
-			checkCudaErrors(cudaFree(dFilter));
+
 
 			return(0);
 }
 
+//==============================================================================
+
+//run shared memory kernel test=================================================
+
 int runSharedTest(float* hData, unsigned int width, unsigned int height,int filterDim,int size,float* filter){
 
-	cudaEvent_t cslaunch_begin, cslaunch_end;
+	cudaEvent_t cslaunch_begin, cslaunch_end,total_begin,total_end;
+
+	cudaEventCreate(&total_begin);
+	cudaEventCreate(&total_end);
+	cudaEventRecord(total_begin,0);
 
  	float *hsOutputData = (float *) malloc(size);
 
@@ -357,19 +421,46 @@ int runSharedTest(float* hData, unsigned int width, unsigned int height,int filt
 
   // copy the result back to the host memory space
   cudaMemcpy(hsOutputData, dsOutput, size, cudaMemcpyDeviceToHost);
-  printf("GPU Shared run time: %fms\n", cstime);
 
-  sdkSavePGM("Image_SHARED_OUT.pgm",hsOutputData,width,height);
-	free(hsOutputData);
 	checkCudaErrors(cudaFree(dsData));
 	checkCudaErrors(cudaFree(dsOutput));
 	checkCudaErrors(cudaFree(dsFilter));
+
+
+//check total time for cudaArray
+	cudaEventRecord(total_end,0);
+	cudaEventSynchronize(total_end);
+// measure the time (ms) spent in the kernel
+	float totaltime = 0;
+	cudaEventElapsedTime(&totaltime, total_begin, total_end);
+
+
+//print time results
+	printf("GPU Shared TIMES =====================\n");
+	printf("GPU Shared run time: %fms\n", cstime);
+	printf("GPU Shared Memory allocation time: %fms \n", totaltime-cstime) ;
+	printf("GPU Shared TOTAL TIME: %fms \n",totaltime);
+	printf("===================================== \n \n");
+
+  sdkSavePGM("Image_SHARED_OUT.pgm",hsOutputData,width,height);
+	free(hsOutputData);
+
 	return(0);
 
 }
 
+//==============================================================================
+
+//run constant memory kernel test===============================================
+
 int runConstantTest(float* hData, unsigned int width, unsigned int height,int filterDim,int size,float* filter){
-		cudaEvent_t cglaunch_begin, cglaunch_end;
+		cudaEvent_t cglaunch_begin, cglaunch_end,total_end,total_begin;
+
+		//record total time including memory addresses
+		cudaEventCreate(&total_begin);
+		cudaEventCreate(&total_end);
+		cudaEventRecord(total_begin,0);
+
 		float *hOutputData = (float *) malloc(size);
 		float *dcData = 0;
 		float *dcOutput = 0;
@@ -402,7 +493,7 @@ int runConstantTest(float* hData, unsigned int width, unsigned int height,int fi
 		 // record a CUDA event immediately before and after the kernel launch
 		 cudaEventRecord(cglaunch_begin,0);
 		 // launch the kernel
-		 GPUConstantConv<<<cgrid_size, block_size>>>(dcData,dconstantFilter,dcOutput,width,height,filterDim) ;          //Call the kernal
+		 GPUConstantConv<<<cgrid_size, block_size>>>(dcData,dcOutput,width,height,filterDim) ;          //Call the kernal
 		 cudaEventRecord(cglaunch_end,0);
 		 cudaEventSynchronize(cglaunch_end);
 		 // measure the time (ms) spent in the kernel
@@ -411,19 +502,46 @@ int runConstantTest(float* hData, unsigned int width, unsigned int height,int fi
 
 		 // copy the result back to the host memory space
 		 cudaMemcpy(hOutputData, dcOutput, size, cudaMemcpyDeviceToHost);
-		 printf("GPU Const run time: %fms\n", cgtime);
 
-		 sdkSavePGM("Image_CONST_OUT.pgm",hOutputData,width,height);
-		 free(hOutputData);
 		 checkCudaErrors(cudaFree(dcData));
 		 checkCudaErrors(cudaFree(dcOutput));
 		 checkCudaErrors(cudaFree(dcFilter));
+
+		 cudaEventRecord(total_end,0);
+		 cudaEventSynchronize(total_end);
+	 // measure the time (ms) spent in the kernel
+		 float totaltime = 0;
+		 cudaEventElapsedTime(&totaltime, total_begin, total_end);
+
+	//print time results
+		 printf("GPU Constant TIMES =====================\n");
+		 printf("GPU Constant run time: %fms\n", cgtime);
+		 printf("GPU Constant Memory allocation time: %fms \n", totaltime-cgtime) ;
+		 printf("GPU Constant TOTAL TIME %fms: \n",totaltime);
+		 printf("===================================== \n \n");
+
+
+  	sdkSavePGM("Image_NAIVE_OUT.pgm",hOutputData,width,height);
+
+		 sdkSavePGM("Image_CONST_OUT.pgm",hOutputData,width,height);
+		 free(hOutputData);
+
 		 return(0);
 
 }
 
+//==============================================================================
+
+//run texture memory kernel test================================================
 int runTextureTest(float* hData, unsigned int width, unsigned int height,int filterDim,int size,float* filter){
-		cudaEvent_t tglaunch_begin, tglaunch_end;
+		cudaEvent_t tglaunch_begin, tglaunch_end,total_end,total_begin;
+
+		//record total time including memory addresses
+		cudaEventCreate(&total_begin);
+		cudaEventCreate(&total_end);
+		cudaEventRecord(total_begin,0);
+
+
 		float *dtFilter = 0;                               //create pointer for filter
 		float *dData = 0 ;
 		float *hOutputData = (float *) malloc(size);
@@ -473,17 +591,33 @@ int runTextureTest(float* hData, unsigned int width, unsigned int height,int fil
 		 // copy result from device to host
 		 checkCudaErrors(cudaMemcpy(hOutputData,dData,size,	cudaMemcpyDeviceToHost));
 
-		 printf("GPU Texture run time: %fms\n", tgtime);
+		 //free device memory
+		 checkCudaErrors(cudaFree(dData));
+		 checkCudaErrors(cudaFree(dtFilter));
+
+
+		 cudaEventRecord(total_end,0);
+		 cudaEventSynchronize(total_end);
+	 // measure the time (ms) spent in the kernel
+		 float totaltime = 0;
+		 cudaEventElapsedTime(&totaltime, total_begin, total_end);
+
+
+//print time results
+		 printf("GPU Texture TIMES =====================\n");
+		 printf("GPU Texture run time: %fms: \n", tgtime);
+		 printf("GPU Texture Memory allocation time: %fms \n", totaltime-tgtime) ;
+		 printf("GPU Texture TOTAL TIME %fms: \n",totaltime);
+		 printf("===================================== \n \n");
 
 		 sdkSavePGM("Image_TEXT_OUT.pgm",hOutputData,width,height);
 
 		 free(hOutputData);
-		 checkCudaErrors(cudaFree(dData));
-		 checkCudaErrors(cudaFree(dtFilter));
+
 		 return(0);
 
 }
-
+//==============================================================================
 
 int main(int argc, char **argv){
 
@@ -500,7 +634,7 @@ cudaMemGetInfo(&available,&total);
 
 //DEFINE FILTER HERE============================================================
 //	float filter[] ={0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0};                 //returns original image
-	 float filter[] ={-1.0,0.0,1.0,-2.0,0.0,2.0,-1.0,0.0,1.0};            //highlights edges
+//	 float filter[] ={-1.0,0.0,1.0,-2.0,0.0,2.0,-1.0,0.0,1.0};            //highlights edges
 //	float filter[] ={-1.0,-1.0,-1.0,-1.0,9.0,-1.0,-1.0,-1.0,-1.0};      //sharpens image
 //	float filter[] ={1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0};   //slightly blurs image
 
@@ -519,7 +653,9 @@ cudaMemGetInfo(&available,&total);
 
 			runCPUTest(hData,width,height,filterDim,size,filter);
 			runNaiveTest(hData,width,height,filterDim,size,filter);
+			// runConstantTest(hData,width,height,filterDim,size,filter);
 			runConstantTest(hData,width,height,filterDim,size,filter);
+
 			runTextureTest(hData,width,height,filterDim,size,filter);
 			runSharedTest(hData,width,height,filterDim,size,filter);
 
