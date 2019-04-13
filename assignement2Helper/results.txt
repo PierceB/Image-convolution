@@ -1,0 +1,284 @@
+3x3 sharp lena 16 tile width======================================================================================================
+
+GPU Device 0: "GeForce GTX 1060 6GB" with compute capability 6.1
+
+CPU run time: 28.009472ms
+
+GPU NAIVE TIMES =====================
+GPU Naive run time: 0.163840ms
+GPU NAIVE Memory allocation time: 0.972576ms 
+GPU NAIVE TOTAL TIME: 1.136416ms 
+===================================== 
+ 
+GPU Constant TIMES =====================
+GPU Constant run time: 0.151392ms
+GPU Constant Memory allocation time: 0.701568ms 
+GPU Constant TOTAL TIME 0.852960ms: 
+===================================== 
+ 
+GPU Texture TIMES =====================
+GPU Texture run time: 0.085504ms: 
+GPU Texture Memory allocation time: 0.758304ms 
+GPU Texture TOTAL TIME 0.843808ms: 
+===================================== 
+ 
+GPU Shared TIMES =====================
+GPU Shared run time: 0.070656ms
+GPU Shared Memory allocation time: 0.695296ms 
+GPU Shared TOTAL TIME: 0.765952ms 
+===================================== 
+ 
+5x5 sharp lena   16 tile width======================================================================================================
+
+GPU Device 0: "GeForce GTX 1060 6GB" with compute capability 6.1
+
+CPU run time: 70.815491ms
+
+GPU NAIVE TIMES =====================
+GPU Naive run time: 0.362272ms
+GPU NAIVE Memory allocation time: 0.832448ms 
+GPU NAIVE TOTAL TIME: 1.194720ms 
+===================================== 
+ 
+GPU Constant TIMES =====================
+GPU Constant run time: 0.356352ms
+GPU Constant Memory allocation time: 0.661664ms 
+GPU Constant TOTAL TIME 1.018016ms: 
+===================================== 
+ 
+GPU Texture TIMES =====================
+GPU Texture run time: 0.177216ms: 
+GPU Texture Memory allocation time: 0.790016ms 
+GPU Texture TOTAL TIME 0.967232ms: 
+===================================== 
+ 
+GPU Shared TIMES =====================
+GPU Shared run time: 0.149248ms
+GPU Shared Memory allocation time: 0.565344ms 
+GPU Shared TOTAL TIME: 0.714592ms 
+===================================== 
+
+
+
+
+7x7 sharp lena   16 tile width======================================================================================================
+ 
+GPU Device 0: "GeForce GTX 1060 6GB" with compute capability 6.1
+
+CPU run time: 138.703232ms
+
+GPU NAIVE TIMES =====================
+GPU Naive run time: 0.692224ms
+GPU NAIVE Memory allocation time: 1.042112ms 
+GPU NAIVE TOTAL TIME: 1.734336ms 
+===================================== 
+ 
+GPU Constant TIMES =====================
+GPU Constant run time: 0.683712ms
+GPU Constant Memory allocation time: 0.651680ms 
+GPU Constant TOTAL TIME 1.335392ms: 
+===================================== 
+ 
+GPU Texture TIMES =====================
+GPU Texture run time: 0.326880ms: 
+GPU Texture Memory allocation time: 0.724640ms 
+GPU Texture TOTAL TIME 1.051520ms: 
+===================================== 
+ 
+GPU Shared TIMES =====================
+GPU Shared run time: 0.282112ms
+GPU Shared Memory allocation time: 0.611456ms 
+GPU Shared TOTAL TIME: 0.893568ms 
+===================================== 
+ 
+
+3x3 sharp airfield  16 tile width======================================================================================================
+
+GPU Device 0: "GeForce GTX 1060 6GB" with compute capability 6.1
+
+CPU run time: 110.818848ms
+
+GPU NAIVE TIMES =====================
+GPU Naive run time: 0.563200ms
+GPU NAIVE Memory allocation time: 2.702208ms 
+GPU NAIVE TOTAL TIME: 3.265408ms 
+===================================== 
+ 
+GPU Constant TIMES =====================
+GPU Constant run time: 0.559104ms
+GPU Constant Memory allocation time: 1.724224ms 
+GPU Constant TOTAL TIME 2.283328ms: 
+===================================== 
+ 
+GPU Texture TIMES =====================
+GPU Texture run time: 0.273216ms: 
+GPU Texture Memory allocation time: 1.487072ms 
+GPU Texture TOTAL TIME 1.760288ms: 
+===================================== 
+ 
+GPU Shared TIMES =====================
+GPU Shared run time: 0.229376ms
+GPU Shared Memory allocation time: 1.649120ms 
+GPU Shared TOTAL TIME: 1.878496ms 
+===================================== 
+ 
+5x5 sharp airfield 16 tile width======================================================================================================
+ 
+GPU Device 0: "GeForce GTX 1060 6GB" with compute capability 6.1
+
+CPU run time: 289.223694ms
+
+GPU NAIVE TIMES =====================
+GPU Naive run time: 1.396320ms
+GPU NAIVE Memory allocation time: 2.626272ms 
+GPU NAIVE TOTAL TIME: 4.022592ms 
+===================================== 
+ 
+GPU Constant TIMES =====================
+GPU Constant run time: 1.392256ms
+GPU Constant Memory allocation time: 1.828512ms 
+GPU Constant TOTAL TIME 3.220768ms: 
+===================================== 
+ 
+GPU Texture TIMES =====================
+GPU Texture run time: 0.637024ms: 
+GPU Texture Memory allocation time: 1.512032ms 
+GPU Texture TOTAL TIME 2.149056ms: 
+===================================== 
+ 
+GPU Shared TIMES =====================
+GPU Shared run time: 0.567296ms
+GPU Shared Memory allocation time: 1.588640ms 
+GPU Shared TOTAL TIME: 2.155936ms 
+===================================== 
+ 
+7x7 sharp airfield 16 tile width======================================================================================================
+
+GPU Device 0: "GeForce GTX 1060 6GB" with compute capability 6.1
+
+CPU run time: 560.674805ms
+
+GPU NAIVE TIMES =====================
+GPU Naive run time: 2.701312ms
+GPU NAIVE Memory allocation time: 2.590240ms 
+GPU NAIVE TOTAL TIME: 5.291552ms 
+===================================== 
+ 
+GPU Constant TIMES =====================
+GPU Constant run time: 2.688864ms
+GPU Constant Memory allocation time: 1.687264ms 
+GPU Constant TOTAL TIME 4.376128ms: 
+===================================== 
+ 
+GPU Texture TIMES =====================
+GPU Texture run time: 1.276928ms: 
+GPU Texture Memory allocation time: 1.450208ms 
+GPU Texture TOTAL TIME 2.727136ms: 
+===================================== 
+ 
+GPU Shared TIMES =====================
+GPU Shared run time: 1.123200ms
+GPU Shared Memory allocation time: 1.654208ms 
+GPU Shared TOTAL TIME: 2.777408ms 
+===================================== 
+ 
+
+=======================================================================================================================================================================
+
+
+3x3 sharp lena 32 tile width
+
+GPU Device 0: "GeForce GTX 1060 6GB" with compute capability 6.1
+
+CPU run time: 27.195423ms
+
+GPU NAIVE TIMES =====================
+GPU Naive run time: 0.168768ms
+GPU NAIVE Memory allocation time: 1.230784ms 
+GPU NAIVE TOTAL TIME: 1.399552ms 
+===================================== 
+ 
+GPU Constant TIMES =====================
+GPU Constant run time: 0.189440ms
+GPU Constant Memory allocation time: 0.841248ms 
+GPU Constant TOTAL TIME 1.030688ms: 
+===================================== 
+ 
+GPU Texture TIMES =====================
+GPU Texture run time: 0.084512ms: 
+GPU Texture Memory allocation time: 0.786272ms 
+GPU Texture TOTAL TIME 0.870784ms: 
+===================================== 
+ 
+GPU Shared TIMES =====================
+GPU Shared run time: 0.064416ms
+GPU Shared Memory allocation time: 0.606144ms 
+GPU Shared TOTAL TIME: 0.670560ms 
+===================================== 
+ 
+
+5x5 sharp lena 32 tile width =======================================================================================
+
+GPU Device 0: "GeForce GTX 1060 6GB" with compute capability 6.1
+
+CPU run time: 71.499779ms
+
+GPU NAIVE TIMES =====================
+GPU Naive run time: 0.390112ms
+GPU NAIVE Memory allocation time: 0.872352ms 
+GPU NAIVE TOTAL TIME: 1.262464ms 
+===================================== 
+ 
+GPU Constant TIMES =====================
+GPU Constant run time: 0.385952ms
+GPU Constant Memory allocation time: 0.843456ms 
+GPU Constant TOTAL TIME 1.229408ms: 
+===================================== 
+ 
+GPU Texture TIMES =====================
+GPU Texture run time: 0.170848ms: 
+GPU Texture Memory allocation time: 0.753504ms 
+GPU Texture TOTAL TIME 0.924352ms: 
+===================================== 
+ 
+GPU Shared TIMES =====================
+GPU Shared run time: 0.148128ms
+GPU Shared Memory allocation time: 0.639328ms 
+GPU Shared TOTAL TIME: 0.787456ms 
+===================================== 
+ 
+
+7x7 sharp lena 32 tile width==========================================================================================
+
+GPU Device 0: "GeForce GTX 1060 6GB" with compute capability 6.1
+
+CPU run time: 138.306534ms
+
+GPU NAIVE TIMES =====================
+GPU Naive run time: 0.734208ms
+GPU NAIVE Memory allocation time: 0.822016ms 
+GPU NAIVE TOTAL TIME: 1.556224ms 
+===================================== 
+ 
+GPU Constant TIMES =====================
+GPU Constant run time: 0.721920ms
+GPU Constant Memory allocation time: 0.694656ms 
+GPU Constant TOTAL TIME 1.416576ms: 
+===================================== 
+ 
+GPU Texture TIMES =====================
+GPU Texture run time: 0.320000ms: 
+GPU Texture Memory allocation time: 0.735584ms 
+GPU Texture TOTAL TIME 1.055584ms: 
+===================================== 
+ 
+GPU Shared TIMES =====================
+GPU Shared run time: 0.281568ms
+GPU Shared Memory allocation time: 0.585312ms 
+GPU Shared TOTAL TIME: 0.866880ms 
+================================================================================================================================
+
+================================================================================================================================
+
+ 
+ 

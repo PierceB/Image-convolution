@@ -19,8 +19,8 @@
 #include <helper_cuda.h>         // helper functions for CUDA error check
 
 #define MAX_EPSILON_ERROR 5e-3f
-#define TILE_WIDTH 16
-#define FILTERDIM 3                     //CHANGE THIS WHEN USING DIFFERENT MASK SIZE
+#define TILE_WIDTH 32
+#define FILTERDIM 7                     //CHANGE THIS WHEN USING DIFFERENT MASK SIZE
 #define PW (TILE_WIDTH + FILTERDIM - 1 )
 
 //FILTERS=======================================================================
@@ -28,7 +28,7 @@
 //3x3 filters
 
 //Edge detection 3x3
-float filter[] = {-1.0, 0.0, 1.0, -2.0, 0.0, 2.0, -1.0, 0.0, 1.0};
+// float filter[] = {-1.0, 0.0, 1.0, -2.0, 0.0, 2.0, -1.0, 0.0, 1.0};
 //Sharpening 3x3
 // float filter[] = {-1.0, -1.0, -1.0, -1.0, 9, -1.0, -1.0, -1.0, -1.0};
 // //blur/average 3x3
@@ -37,25 +37,25 @@ float filter[] = {-1.0, 0.0, 1.0, -2.0, 0.0, 2.0, -1.0, 0.0, 1.0};
 // //5x5 filters
 //
 // //Sharpening 5x5
-// float filter[] = {-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,-1.0, -1.0, 25, -1.0, -1.0,-1.0, -1.0, -1.0, -1.0, -1.0,-1.0, -1.0, -1.0, -1.0, -1.0};
+ // float filter[] = {-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,-1.0, -1.0, 25, -1.0, -1.0,-1.0, -1.0, -1.0, -1.0, -1.0,-1.0, -1.0, -1.0, -1.0, -1.0};
 // //Averaging 5x5
-// float filter[] = {0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04,0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04,};
+// float filter[] = {0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04,0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04};
 //
 // //7x7 Filters
 //
 // //sharpening 7x7
- //float filter[] = {-1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0,-1.0, -1.0, -1.0, 49, -1.0, -1.0 ,-1.0,- 1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0};
+ // float filter[] = {-1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0,-1.0, -1.0, -1.0, 49, -1.0, -1.0 ,-1.0,- 1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0,-1.0, -1.0, -1.0, -1.0, -1.0, -1.0 ,-1.0};
 //
 //
 // 	//Averaging
-// float filter[] = {1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,}
+ float filter[] = {1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0, 1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0,1.0/49.0};
 //==============================================================================
 
 
 
 texture<float, 2, cudaReadModeElementType> tex;
 
-const char *imageFilename = "lena_bw.pgm";
+char *imageFilename = "lena_bw.pgm";
 
 const char *sampleName = "HPCAssignment2.cu";
 
@@ -318,7 +318,7 @@ int runNaiveTest(float* hData, unsigned int width, unsigned int height,int filte
 			cudaMemcpy(dData, hData, size, cudaMemcpyHostToDevice);            //Copy the image to the device
 			cudaMemcpy(dFilter, filter, filterDim*filterDim*sizeof(float), cudaMemcpyHostToDevice);	   //copy the filter to the device
 
-			const size_t block_size = 64;                                 //initialise block size
+			const size_t block_size = TILE_WIDTH;                                 //initialise block size
 	  	size_t grid_size = width*height / block_size;                   // calculate gride size
 
 	  	// deal with a possible partial final block
@@ -482,7 +482,7 @@ int runConstantTest(float* hData, unsigned int width, unsigned int height,int fi
 		cudaMemcpyToSymbol(dconstantFilter,filter,sizeof(float)*filterDim*filterDim,0,cudaMemcpyHostToDevice) ;
 
 
-		const size_t block_size = 64;                                 //initialise block size                  // calculate gride size
+		const size_t block_size = TILE_WIDTH;                                 //initialise block size                  // calculate gride size
 		size_t cgrid_size = width*height / block_size;                   // calculate gride size
 
 	  	// deal with a possible partial final block
@@ -567,7 +567,7 @@ int runTextureTest(float* hData, unsigned int width, unsigned int height,int fil
 		 // Bind the array to the texture
 		 checkCudaErrors(cudaBindTextureToArray(tex, cuArray, channelDesc));
 
-		 dim3 dimBlock(8, 8, 1);				//initlise block and grid size, 2D
+		 dim3 dimBlock(TILE_WIDTH,TILE_WIDTH, 1);				//initlise block and grid size, 2D
 		 dim3 dimGrid(width / dimBlock.x, height / dimBlock.y, 1);
 
 		 checkCudaErrors(cudaDeviceSynchronize());       //wait for all threads
@@ -621,8 +621,10 @@ int runTextureTest(float* hData, unsigned int width, unsigned int height,int fil
 
 int main(int argc, char **argv){
 
-size_t available, total;
-cudaMemGetInfo(&available,&total);
+
+if(argc > 1){
+	imageFilename = argv[1];
+}
 
 
 
@@ -632,14 +634,9 @@ cudaMemGetInfo(&available,&total);
     	unsigned int width, height;
     	char *imagePath = sdkFindFilePath(imageFilename, argv[0]);           //find the image path
 
-//DEFINE FILTER HERE============================================================
-//	float filter[] ={0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0};                 //returns original image
-//	 float filter[] ={-1.0,0.0,1.0,-2.0,0.0,2.0,-1.0,0.0,1.0};            //highlights edges
-//	float filter[] ={-1.0,-1.0,-1.0,-1.0,9.0,-1.0,-1.0,-1.0,-1.0};      //sharpens image
-//	float filter[] ={1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0,1.0/9.0};   //slightly blurs image
 
 	int filterDim=FILTERDIM;  						//dimensions of the filter, assume its square
-//==============================================================================
+
 
     	if (imagePath == NULL)
     	{
